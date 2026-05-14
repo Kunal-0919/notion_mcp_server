@@ -38,7 +38,7 @@ For a stdio MCP client, point the command at this workspace:
   "mcpServers": {
     "notion": {
       "command": "node",
-      "args": ["/Users/kunbishn/Documents/projects/notion_mcp_server/dist/index.js"],
+      "args": ["complete_build_path"],
       "env": {
         "NOTION_TOKEN": "secret_xxx",
         "NOTION_MCP_ENABLE_WRITE": "false"
