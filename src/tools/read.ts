@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { fail, ok } from "../mcp/responses.js";
 import { jsonObjectSchema } from "../mcp/schemas.js";
+import { readPageAsMarkdown } from "../notion/markdown.js";
 
 export function registerReadTools(server: McpServer, notion: Client): void {
   server.tool(
@@ -125,6 +126,26 @@ export function registerReadTools(server: McpServer, notion: Client): void {
             start_cursor,
           }),
         );
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+
+  server.tool(
+    "notion_read_page_as_markdown",
+    "Read a Notion page's block content as Markdown text.",
+    {
+      page_id: z.string().min(1).describe("Notion page ID or URL page UUID."),
+      recursive: z.boolean().default(false).describe("When true, also fetch nested child blocks."),
+    },
+    async ({ page_id, recursive }) => {
+      try {
+        return ok({
+          page_id,
+          markdown: await readPageAsMarkdown(notion, page_id, { recursive }),
+        });
       } catch (error) {
         return fail(error);
       }
