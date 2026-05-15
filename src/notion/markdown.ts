@@ -5,6 +5,8 @@ type NotionBlock = BlockObjectResponse | PartialBlockObjectResponse;
 
 type MarkdownOptions = {
   recursive?: boolean;
+  includeChildPages?: boolean;
+  maxDepth?: number;
   pageSize?: number;
 };
 
@@ -12,6 +14,8 @@ export async function readPageAsMarkdown(client: Client, pageId: string, options
   const blocks = await listBlockChildren(client, pageId, options.pageSize ?? 100);
   const markdown = await blocksToMarkdown(client, blocks, {
     recursive: options.recursive ?? false,
+    includeChildPages: options.includeChildPages ?? false,
+    maxDepth: options.maxDepth ?? 3,
     pageSize: options.pageSize ?? 100,
     depth: 0,
   });
@@ -51,6 +55,23 @@ async function blocksToMarkdown(
       lines.push(line);
     }
 
+    if (options.depth >= options.maxDepth) {
+      continue;
+    }
+
+    if (options.includeChildPages && "type" in block && block.type === "child_page") {
+      const childMarkdown = await readChildPageAsMarkdown(client, block.id, block.child_page.title, {
+        ...options,
+        depth: options.depth + 1,
+      });
+
+      if (childMarkdown) {
+        lines.push(childMarkdown);
+      }
+
+      continue;
+    }
+
     if (options.recursive && "has_children" in block && block.has_children) {
       const children = await listBlockChildren(client, block.id, options.pageSize);
       const childMarkdown = await blocksToMarkdown(client, children, {
@@ -65,6 +86,19 @@ async function blocksToMarkdown(
   }
 
   return lines.join("\n\n");
+}
+
+async function readChildPageAsMarkdown(
+  client: Client,
+  pageId: string,
+  title: string,
+  options: Required<MarkdownOptions> & { depth: number },
+): Promise<string> {
+  const blocks = await listBlockChildren(client, pageId, options.pageSize);
+  const markdown = await blocksToMarkdown(client, blocks, options);
+  const headingLevel = Math.min(options.depth + 1, 6);
+
+  return `${"#".repeat(headingLevel)} ${title}${markdown ? `\n\n${markdown}` : ""}`;
 }
 
 function blockToMarkdown(block: NotionBlock, depth: number): string {

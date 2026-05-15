@@ -54,14 +54,34 @@ Set `NOTION_MCP_ENABLE_WRITE=true` only if you want tools that create, append, u
 
 - `notion_search` - search shared Notion pages and databases
 - `notion_get_page` - retrieve a page by ID
+- `notion_find_page_by_title` - find pages by exact, partial, or fuzzy title match
 - `notion_get_database` - retrieve legacy database metadata by ID
 - `notion_get_data_source` - retrieve a data source by ID
 - `notion_query_data_source` - query a data source with optional filters and sorts
 - `notion_query_database` - compatibility alias for querying a database/data source ID
+- `notion_read_page_as_markdown` - read a page by ID as Markdown, with optional nested block and child-page traversal
+- `notion_read_page_by_title_as_markdown` - find the best page title match and read it as Markdown, with optional nested block and child-page traversal
 - `notion_get_block_children` - list blocks under a page or block
 - `notion_create_page` - create a page when writes are enabled
 - `notion_append_blocks` - append blocks when writes are enabled
 - `notion_update_page` - update properties or archive state when writes are enabled
+
+## Validation
+
+```bash
+npm run typecheck
+npm run build
+npm run smoke
+```
+
+## Example Prompts
+
+Markdown traversal options: `recursive` reads nested blocks, `include_child_pages` opens child pages, and `max_depth` limits traversal.
+
+- Find my Notion page titled `Project Notes`.
+- Read my Notion page titled `Project Notes` as Markdown.
+- Read Notion page `<page_id>` as Markdown recursively.
+- Read my Notion page titled `Project Notes` as Markdown including child pages up to depth 3.
 
 ## Notion Access Notes
 

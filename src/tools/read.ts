@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fail, ok } from "../mcp/responses.js";
 import { jsonObjectSchema } from "../mcp/schemas.js";
 import { readPageAsMarkdown } from "../notion/markdown.js";
+import { findBestPageByTitle, findPageByTitle } from "../notion/pages.js";
 
 export function registerReadTools(server: McpServer, notion: Client): void {
   server.tool(
@@ -134,17 +135,67 @@ export function registerReadTools(server: McpServer, notion: Client): void {
 
 
   server.tool(
+    "notion_find_page_by_title",
+    "Find Notion pages by title so users do not need to copy page IDs.",
+    {
+      title: z.string().min(1).describe("Page title or title fragment to search for."),
+      limit: z.number().int().min(1).max(100).default(10),
+    },
+    async ({ title, limit }) => {
+      try {
+        return ok({
+          query: title,
+          results: await findPageByTitle(notion, title, limit),
+        });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+  server.tool(
+    "notion_read_page_by_title_as_markdown",
+    "Find the best Notion page title match and read that page as Markdown.",
+    {
+      title: z.string().min(1).describe("Page title or title fragment to search for."),
+      recursive: z.boolean().default(false).describe("When true, also fetch nested child blocks."),
+      include_child_pages: z.boolean().default(false).describe("When true, also read child_page block contents."),
+      max_depth: z.number().int().min(0).max(10).default(3).describe("Maximum nested traversal depth for child blocks and child pages."),
+    },
+    async ({ title, recursive, include_child_pages, max_depth }) => {
+      try {
+        const page = await findBestPageByTitle(notion, title);
+
+        if (!page) {
+          return fail(`No Notion page found for title: ${title}`);
+        }
+
+        return ok({
+          query: title,
+          page,
+          markdown: await readPageAsMarkdown(notion, page.id, { recursive, includeChildPages: include_child_pages, maxDepth: max_depth }),
+        });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+
+  server.tool(
     "notion_read_page_as_markdown",
     "Read a Notion page's block content as Markdown text.",
     {
       page_id: z.string().min(1).describe("Notion page ID or URL page UUID."),
       recursive: z.boolean().default(false).describe("When true, also fetch nested child blocks."),
+      include_child_pages: z.boolean().default(false).describe("When true, also read child_page block contents."),
+      max_depth: z.number().int().min(0).max(10).default(3).describe("Maximum nested traversal depth for child blocks and child pages."),
     },
-    async ({ page_id, recursive }) => {
+    async ({ page_id, recursive, include_child_pages, max_depth }) => {
       try {
         return ok({
           page_id,
-          markdown: await readPageAsMarkdown(notion, page_id, { recursive }),
+          markdown: await readPageAsMarkdown(notion, page_id, { recursive, includeChildPages: include_child_pages, maxDepth: max_depth }),
         });
       } catch (error) {
         return fail(error);
