@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { fail, ok } from "../mcp/responses.js";
 import { jsonObjectSchema } from "../mcp/schemas.js";
+import { extractActionItems } from "../notion/action-items.js";
 import { readPageAsMarkdown } from "../notion/markdown.js";
 import { findBestPageByTitle, findPageByTitle } from "../notion/pages.js";
 
@@ -196,6 +197,71 @@ export function registerReadTools(server: McpServer, notion: Client): void {
         return ok({
           page_id,
           markdown: await readPageAsMarkdown(notion, page_id, { recursive, includeChildPages: include_child_pages, maxDepth: max_depth }),
+        });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+
+  server.tool(
+    "notion_extract_action_items_from_page",
+    "Read a Notion page by ID as Markdown and extract checkbox action items.",
+    {
+      page_id: z.string().min(1).describe("Notion page ID or URL page UUID."),
+      recursive: z.boolean().default(true).describe("When true, also fetch nested child blocks."),
+      include_child_pages: z.boolean().default(false).describe("When true, also read child_page block contents."),
+      max_depth: z.number().int().min(0).max(10).default(3).describe("Maximum nested traversal depth for child blocks and child pages."),
+      include_markdown: z.boolean().default(false).describe("When true, include the source Markdown in the response."),
+    },
+    async ({ page_id, recursive, include_child_pages, max_depth, include_markdown }) => {
+      try {
+        const markdown = await readPageAsMarkdown(notion, page_id, {
+          recursive,
+          includeChildPages: include_child_pages,
+          maxDepth: max_depth,
+        });
+
+        return ok({
+          source: { type: "page_id", page_id },
+          action_items: extractActionItems(markdown),
+          ...(include_markdown ? { markdown } : {}),
+        });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+  server.tool(
+    "notion_extract_action_items_from_page_title",
+    "Find a Notion page by title, read it as Markdown, and extract checkbox action items.",
+    {
+      title: z.string().min(1).describe("Page title or title fragment to search for."),
+      recursive: z.boolean().default(true).describe("When true, also fetch nested child blocks."),
+      include_child_pages: z.boolean().default(false).describe("When true, also read child_page block contents."),
+      max_depth: z.number().int().min(0).max(10).default(3).describe("Maximum nested traversal depth for child blocks and child pages."),
+      include_markdown: z.boolean().default(false).describe("When true, include the source Markdown in the response."),
+    },
+    async ({ title, recursive, include_child_pages, max_depth, include_markdown }) => {
+      try {
+        const page = await findBestPageByTitle(notion, title);
+
+        if (!page) {
+          return fail(`No Notion page found for title: ${title}`);
+        }
+
+        const markdown = await readPageAsMarkdown(notion, page.id, {
+          recursive,
+          includeChildPages: include_child_pages,
+          maxDepth: max_depth,
+        });
+
+        return ok({
+          source: { type: "title", query: title, page },
+          action_items: extractActionItems(markdown),
+          ...(include_markdown ? { markdown } : {}),
         });
       } catch (error) {
         return fail(error);

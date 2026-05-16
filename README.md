@@ -61,6 +61,8 @@ Set `NOTION_MCP_ENABLE_WRITE=true` only if you want tools that create, append, u
 - `notion_query_database` - compatibility alias for querying a database/data source ID
 - `notion_read_page_as_markdown` - read a page by ID as Markdown, with optional nested block and child-page traversal
 - `notion_read_page_by_title_as_markdown` - find the best page title match and read it as Markdown, with optional nested block and child-page traversal
+- `notion_extract_action_items_from_page` - extract checkbox action items from a page ID
+- `notion_extract_action_items_from_page_title` - find a page by title and extract checkbox action items
 - `notion_get_block_children` - list blocks under a page or block
 - `notion_create_page` - create a page when writes are enabled
 - `notion_append_blocks` - append blocks when writes are enabled
@@ -82,6 +84,7 @@ Markdown traversal options: `recursive` reads nested blocks, `include_child_page
 - Read my Notion page titled `Project Notes` as Markdown.
 - Read Notion page `<page_id>` as Markdown recursively.
 - Read my Notion page titled `Project Notes` as Markdown including child pages up to depth 3.
+- Extract action items from my Notion page titled `Meeting Notes`.
 
 ## Notion Access Notes
 
